@@ -1,5 +1,5 @@
 import { asc, count, eq } from "drizzle-orm";
-import { db } from "../../db/client";
+import type { drizzle } from "drizzle-orm/node-postgres";
 import { categories, items } from "../../db/tables";
 import { slugify } from "../../lib/slug";
 
@@ -24,8 +24,10 @@ export type Category = {
 };
 
 export class CategoriesService {
+  constructor(private readonly db: ReturnType<typeof drizzle>) {}
+
   async list(): Promise<Category[]> {
-    const rows = await db
+    const rows = await this.db
       .select({
         id: categories.id,
         name: categories.name,
@@ -52,7 +54,7 @@ export class CategoriesService {
   }
 
   async getById(id: number): Promise<Category | null> {
-    const rows = await db
+    const rows = await this.db
       .select({
         id: categories.id,
         name: categories.name,
@@ -71,7 +73,7 @@ export class CategoriesService {
 
   async create(input: CategoryInput): Promise<Category> {
     const slug = slugify(input.name);
-    const rows = await db
+    const rows = await this.db
       .insert(categories)
       .values({
         name: input.name.trim(),
@@ -98,7 +100,7 @@ export class CategoriesService {
     const nextDescription = patch.description?.trim() ?? existing.description;
     const nextSlug = slugify(nextName);
 
-    const rows = await db
+    const rows = await this.db
       .update(categories)
       .set({
         name: nextName,
@@ -120,7 +122,7 @@ export class CategoriesService {
   }
 
   async remove(id: number): Promise<boolean> {
-    const rows = await db
+    const rows = await this.db
       .delete(categories)
       .where(eq(categories.id, id))
       .returning({ id: categories.id });

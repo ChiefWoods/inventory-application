@@ -1,30 +1,17 @@
-import { cors } from "@elysiajs/cors";
-import { Elysia } from "elysia";
 import { assertRequiredConfig, config } from "./config";
-import { closeDbPool } from "./db/client";
+import { createApp } from "./app";
+import { closeDbPool, db } from "./db/client";
 import { ensureSchema } from "./db/schema";
-import { categoriesModule } from "./modules/categories";
-import { itemsModule } from "./modules/items";
+import { CategoriesService } from "./modules/categories/service";
+import { ItemsService } from "./modules/items/service";
 
 assertRequiredConfig();
 await ensureSchema();
 
-const app = new Elysia()
-  .use(
-    cors({
-      origin: config.corsOrigin,
-      methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "x-admin-password"],
-    }),
-  )
-  .get("/", () => ({ message: "Inventory API" }))
-  .get("/health", () => ({
-    ok: true,
-    timestamp: new Date().toISOString(),
-  }))
-  .use(categoriesModule)
-  .use(itemsModule)
-  .listen(config.port);
+const app = createApp({
+  categoriesService: new CategoriesService(db),
+  itemsService: new ItemsService(db),
+}).listen(config.port);
 
 console.log(`API running at ${app.server?.hostname}:${app.server?.port}`);
 

@@ -1,5 +1,5 @@
 import { and, asc, eq, ilike, lte, or } from "drizzle-orm";
-import { db } from "../../db/client";
+import type { drizzle } from "drizzle-orm/node-postgres";
 import { categories, items } from "../../db/tables";
 
 export type ItemInput = {
@@ -39,6 +39,8 @@ export type Item = {
 };
 
 export class ItemsService {
+  constructor(private readonly db: ReturnType<typeof drizzle>) {}
+
   async list(filters: ListItemsFilter): Promise<Item[]> {
     const conditions = [];
 
@@ -55,7 +57,7 @@ export class ItemsService {
       conditions.push(lte(items.quantity, items.reorderLevel));
     }
 
-    const rows = await db
+    const rows = await this.db
       .select({
         id: items.id,
         categoryId: items.categoryId,
@@ -80,7 +82,7 @@ export class ItemsService {
   }
 
   async getById(id: number): Promise<Item | null> {
-    const rows = await db
+    const rows = await this.db
       .select({
         id: items.id,
         categoryId: items.categoryId,
@@ -106,7 +108,7 @@ export class ItemsService {
   }
 
   async create(input: ItemInput): Promise<Item> {
-    const inserted = await db
+    const inserted = await this.db
       .insert(items)
       .values({
         categoryId: input.categoryId,
@@ -128,7 +130,7 @@ export class ItemsService {
     const existing = await this.getById(id);
     if (!existing) return null;
 
-    const updated = await db
+    const updated = await this.db
       .update(items)
       .set({
         categoryId: patch.categoryId ?? existing.categoryId,
@@ -150,7 +152,7 @@ export class ItemsService {
   }
 
   async remove(id: number): Promise<boolean> {
-    const rows = await db.delete(items).where(eq(items.id, id)).returning({ id: items.id });
+    const rows = await this.db.delete(items).where(eq(items.id, id)).returning({ id: items.id });
 
     return rows.length > 0;
   }
