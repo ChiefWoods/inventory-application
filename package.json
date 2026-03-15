@@ -19,5 +19,9 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "prepare": "husky"
-  }
+  },
+  "workspaces": [
+    "app",
+    "api"
+  ]
 }
