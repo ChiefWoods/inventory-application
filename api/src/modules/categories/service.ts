@@ -1,5 +1,5 @@
 import { asc, count, eq } from "drizzle-orm";
-import type { drizzle } from "drizzle-orm/node-postgres";
+import type { drizzle } from "drizzle-orm/postgres-js";
 import { categories, items } from "../../db/tables";
 import { slugify } from "../../lib/slug";
 

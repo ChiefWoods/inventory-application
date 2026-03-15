@@ -1,5 +1,5 @@
 import { and, asc, eq, ilike, lte, or } from "drizzle-orm";
-import type { drizzle } from "drizzle-orm/node-postgres";
+import type { drizzle } from "drizzle-orm/postgres-js";
 import { categories, items } from "../../db/tables";
 
 export type ItemInput = {

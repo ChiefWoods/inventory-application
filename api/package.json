@@ -13,10 +13,9 @@
     "@elysiajs/cors": "^1.4.1",
     "drizzle-orm": "^0.45.1",
     "elysia": "latest",
-    "pg": "^8.20.0"
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
-    "@types/pg": "^8.18.0",
     "bun-types": "latest",
     "drizzle-kit": "^0.31.9"
   },
