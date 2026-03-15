@@ -4,16 +4,21 @@
   "scripts": {
     "test": "bun test",
     "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts"
+    "start": "bun run src/index.ts",
+    "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
+    "db:studio": "bunx drizzle-kit studio --config drizzle.config.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
+    "drizzle-orm": "^0.45.1",
     "elysia": "latest",
     "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/pg": "^8.18.0",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "drizzle-kit": "^0.31.9"
   },
   "module": "src/index.js"
 }

@@ -1,15 +1,7 @@
-import { query } from "../../db/client";
+import { asc, count, eq } from "drizzle-orm";
+import { db } from "../../db/client";
+import { categories, items } from "../../db/tables";
 import { slugify } from "../../lib/slug";
-
-type CategoryRow = {
-  id: string | number | bigint;
-  name: string;
-  slug: string;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-  item_count?: string | number | bigint;
-};
 
 export type CategoryInput = {
   name: string;
@@ -31,74 +23,71 @@ export type Category = {
   itemCount?: number;
 };
 
-function toNumber(value: string | number | bigint | undefined): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "bigint") return Number(value);
-  if (!value) return 0;
-  return Number(value);
-}
-
-function mapCategory(row: CategoryRow): Category {
-  return {
-    id: toNumber(row.id),
-    name: row.name,
-    slug: row.slug,
-    description: row.description,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    itemCount: row.item_count !== undefined ? toNumber(row.item_count) : undefined,
-  };
-}
-
 export class CategoriesService {
   async list(): Promise<Category[]> {
-    const rows = await query<CategoryRow>(
-      `
-      SELECT
-        c.id,
-        c.name,
-        c.slug,
-        c.description,
-        c.created_at,
-        c.updated_at,
-        COUNT(i.id)::BIGINT AS item_count
-      FROM categories c
-      LEFT JOIN items i ON i.category_id = c.id
-      GROUP BY c.id
-      ORDER BY c.name ASC;
-    `,
-    );
+    const rows = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        description: categories.description,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+        itemCount: count(items.id),
+      })
+      .from(categories)
+      .leftJoin(items, eq(items.categoryId, categories.id))
+      .groupBy(categories.id)
+      .orderBy(asc(categories.name));
 
-    return rows.map(mapCategory);
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      description: row.description,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      itemCount: row.itemCount,
+    }));
   }
 
   async getById(id: number): Promise<Category | null> {
-    const rows = await query<CategoryRow>(
-      `
-      SELECT id, name, slug, description, created_at, updated_at
-      FROM categories
-      WHERE id = $1
-      LIMIT 1;
-    `,
-      [id],
-    );
+    const rows = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        description: categories.description,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      })
+      .from(categories)
+      .where(eq(categories.id, id))
+      .limit(1);
 
     if (!rows[0]) return null;
-    return mapCategory(rows[0]);
+    return rows[0];
   }
 
   async create(input: CategoryInput): Promise<Category> {
     const slug = slugify(input.name);
-    const rows = await query<CategoryRow>(
-      `
-      INSERT INTO categories (name, slug, description)
-      VALUES ($1, $2, $3)
-      RETURNING id, name, slug, description, created_at, updated_at;
-    `,
-      [input.name.trim(), slug, input.description?.trim() ?? null],
-    );
+    const rows = await db
+      .insert(categories)
+      .values({
+        name: input.name.trim(),
+        slug,
+        description: input.description?.trim() ?? null,
+      })
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        description: categories.description,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
 
-    return mapCategory(rows[0]);
+    return rows[0];
   }
 
   async update(id: number, patch: CategoryPatch): Promise<Category | null> {
@@ -109,32 +98,32 @@ export class CategoriesService {
     const nextDescription = patch.description?.trim() ?? existing.description;
     const nextSlug = slugify(nextName);
 
-    const rows = await query<CategoryRow>(
-      `
-      UPDATE categories
-      SET
-        name = $1,
-        slug = $2,
-        description = $3,
-        updated_at = NOW()
-      WHERE id = $4
-      RETURNING id, name, slug, description, created_at, updated_at;
-    `,
-      [nextName, nextSlug, nextDescription, id],
-    );
+    const rows = await db
+      .update(categories)
+      .set({
+        name: nextName,
+        slug: nextSlug,
+        description: nextDescription,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(categories.id, id))
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        description: categories.description,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
 
-    return rows[0] ? mapCategory(rows[0]) : null;
+    return rows[0] ?? null;
   }
 
   async remove(id: number): Promise<boolean> {
-    const rows = await query<{ id: string | number | bigint }>(
-      `
-      DELETE FROM categories
-      WHERE id = $1
-      RETURNING id;
-    `,
-      [id],
-    );
+    const rows = await db
+      .delete(categories)
+      .where(eq(categories.id, id))
+      .returning({ id: categories.id });
 
     return rows.length > 0;
   }
