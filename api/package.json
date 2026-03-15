@@ -2,13 +2,17 @@
   "name": "@inventory-application/api",
   "version": "0.0.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "test": "bun test",
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysiajs/cors": "^1.4.1",
+    "elysia": "latest",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.18.0",
     "bun-types": "latest"
   },
   "module": "src/index.js"

@@ -1,0 +1,105 @@
+import { Elysia } from "elysia";
+import { normalizeError } from "../../lib/http";
+import { isAdminAuthorized } from "../../lib/security";
+import { categoryIdParams, createCategoryBody, updateCategoryBody } from "./model";
+import { CategoriesService } from "./service";
+
+const categoriesService = new CategoriesService();
+
+export const categoriesModule = new Elysia({ prefix: "/categories" })
+  .get("/", async ({ set }) => {
+    try {
+      const data = await categoriesService.list();
+      return { data };
+    } catch (error) {
+      set.status = 500;
+      return normalizeError(error);
+    }
+  })
+  .get(
+    "/:id",
+    async ({ params, set }) => {
+      try {
+        const data = await categoriesService.getById(params.id);
+        if (!data) {
+          set.status = 404;
+          return { error: "Category not found." };
+        }
+
+        return { data };
+      } catch (error) {
+        set.status = 500;
+        return normalizeError(error);
+      }
+    },
+    { params: categoryIdParams },
+  )
+  .post(
+    "/",
+    async ({ body, set }) => {
+      try {
+        const data = await categoriesService.create(body);
+        set.status = 201;
+        return { data };
+      } catch (error) {
+        set.status = 400;
+        return normalizeError(error);
+      }
+    },
+    { body: createCategoryBody },
+  )
+  .patch(
+    "/:id",
+    async ({ params, body, headers, set }) => {
+      if (!isAdminAuthorized(headers["x-admin-password"])) {
+        set.status = 401;
+        return { error: "Admin password is required for update actions." };
+      }
+
+      if (!body.name && body.description === undefined) {
+        set.status = 400;
+        return { error: "Provide at least one field to update." };
+      }
+
+      try {
+        const data = await categoriesService.update(params.id, body);
+        if (!data) {
+          set.status = 404;
+          return { error: "Category not found." };
+        }
+
+        return { data };
+      } catch (error) {
+        set.status = 400;
+        return normalizeError(error);
+      }
+    },
+    {
+      params: categoryIdParams,
+      body: updateCategoryBody,
+    },
+  )
+  .delete(
+    "/:id",
+    async ({ params, headers, set }) => {
+      if (!isAdminAuthorized(headers["x-admin-password"])) {
+        set.status = 401;
+        return { error: "Admin password is required for delete actions." };
+      }
+
+      try {
+        const didDelete = await categoriesService.remove(params.id);
+        if (!didDelete) {
+          set.status = 404;
+          return { error: "Category not found." };
+        }
+
+        return { data: { id: params.id, deleted: true } };
+      } catch (error) {
+        // FK restriction when category still has items lands here.
+        set.status = 409;
+        return normalizeError(error);
+      }
+    },
+    { params: categoryIdParams },
+  );
