@@ -16,6 +16,7 @@
     "docker:test-db:reset": "docker compose -p inventory-test --profile test down -v",
     "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
+    "db:seed": "bun run src/db/seed.ts",
     "db:studio": "bunx drizzle-kit studio --config drizzle.config.ts"
   },
   "dependencies": {
