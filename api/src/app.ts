@@ -1,4 +1,5 @@
 import { cors } from "@elysiajs/cors";
+import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { config } from "./config";
 import { type CategoriesServiceContract, createCategoriesModule } from "./modules/categories";
@@ -12,6 +13,22 @@ type AppOptions = {
 
 export function createApp(options: AppOptions) {
   return new Elysia()
+    .use(
+      openapi({
+        path: "/openapi",
+        documentation: {
+          info: {
+            title: "Inventory API",
+            version: "1.0.0",
+            description: "Coffee roastery inventory API documentation.",
+          },
+          tags: [
+            { name: "categories", description: "Category CRUD endpoints" },
+            { name: "items", description: "Item CRUD endpoints" },
+          ],
+        },
+      }),
+    )
     .use(
       cors({
         origin: options.corsOrigin ?? config.corsOrigin,
