@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 import {
   AlertDialog,
@@ -100,7 +100,10 @@ export function ItemDetailPage() {
   return (
     <section className="space-y-4">
       <Button variant="ghost" asChild>
-        <Link to="/items">Back to items</Link>
+        <Link to="/items">
+          <ArrowLeft />
+          Back to items
+        </Link>
       </Button>
       <Card>
         <CardHeader>
