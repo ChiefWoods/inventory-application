@@ -1,7 +1,7 @@
+import { useEffect, useState } from "react";
 import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -19,6 +19,7 @@ import { deleteCategory, getCategory, listItems, updateCategory } from "@/lib/ap
 
 type ActionData = {
   error?: string;
+  intent?: "update" | "delete";
 };
 
 type CategoryDetailData = Awaited<ReturnType<typeof loader>>;
@@ -38,11 +39,11 @@ export async function loader({ params }: { params: { id?: string } }) {
 export async function action({ request, params }: { request: Request; params: { id?: string } }) {
   const id = parseId(params);
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "update");
+  const intent = String(formData.get("intent") ?? "update") as "update" | "delete";
   const adminPassword = String(formData.get("adminPassword") ?? "");
 
   if (!adminPassword) {
-    return { error: "Admin password is required." } satisfies ActionData;
+    return { error: "Admin password is required.", intent } satisfies ActionData;
   }
 
   try {
@@ -61,7 +62,13 @@ export async function action({ request, params }: { request: Request; params: { 
     );
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Failed to save category.",
+      error:
+        error instanceof Error
+          ? error.message
+          : intent === "delete"
+            ? "Failed to delete category."
+            : "Failed to save category.",
+      intent,
     } satisfies ActionData;
   }
 
@@ -72,7 +79,22 @@ export function CategoryDetailPage() {
   const { category, itemCount } = useLoaderData() as CategoryDetailData;
   const actionData = useActionData() as ActionData | undefined;
   const navigation = useNavigation();
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const isSubmitting = navigation.state === "submitting";
+
+  useEffect(() => {
+    if (!saveAttempted) return;
+    if (navigation.state !== "idle") return;
+
+    if (actionData?.intent === "update" && actionData.error) {
+      setSaveDialogOpen(true);
+      return;
+    }
+
+    setSaveDialogOpen(false);
+    setSaveAttempted(false);
+  }, [actionData, navigation.state, saveAttempted]);
 
   return (
     <section className="space-y-4">
@@ -85,7 +107,7 @@ export function CategoryDetailPage() {
           <CardDescription>{itemCount} linked items</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form method="post" className="space-y-4">
+          <Form id="category-update-form" method="post" className="space-y-4">
             <input type="hidden" name="intent" value="update" />
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -99,23 +121,48 @@ export function CategoryDetailPage() {
                 defaultValue={category.description ?? ""}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="adminPassword">Admin password</Label>
-              <Input
-                id="adminPassword"
-                type="password"
-                name="adminPassword"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-            {actionData?.error ? (
-              <p className="text-sm text-destructive">{actionData.error}</p>
-            ) : null}
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save changes"}
-              </Button>
+              <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" disabled={isSubmitting}>
+                    {isSubmitting && saveAttempted ? "Saving..." : "Save changes"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm save changes?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Enter your admin password to update this category.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-3">
+                    <Label htmlFor="saveAdminPassword">Admin password</Label>
+                    <Input
+                      id="saveAdminPassword"
+                      type="password"
+                      name="adminPassword"
+                      form="category-update-form"
+                      autoComplete="current-password"
+                      required
+                    />
+                    {saveAttempted && actionData?.intent === "update" && actionData.error ? (
+                      <p className="text-sm text-destructive">{actionData.error}</p>
+                    ) : null}
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <Button
+                        type="submit"
+                        form="category-update-form"
+                        onClick={() => {
+                          setSaveAttempted(true);
+                        }}
+                      >
+                        Confirm save
+                      </Button>
+                    </AlertDialogFooter>
+                  </div>
+                </AlertDialogContent>
+              </AlertDialog>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="destructive">
@@ -133,13 +180,14 @@ export function CategoryDetailPage() {
                     <input type="hidden" name="intent" value="delete" />
                     <Label htmlFor="deleteAdminPassword">Admin password</Label>
                     <Input id="deleteAdminPassword" type="password" name="adminPassword" required />
+                    {actionData?.intent === "delete" && actionData.error ? (
+                      <p className="text-sm text-destructive">{actionData.error}</p>
+                    ) : null}
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction asChild>
-                        <Button type="submit" variant="destructive">
-                          Confirm delete
-                        </Button>
-                      </AlertDialogAction>
+                      <Button type="submit" variant="destructive">
+                        Confirm delete
+                      </Button>
                     </AlertDialogFooter>
                   </Form>
                 </AlertDialogContent>

@@ -55,9 +55,14 @@ export function createCategoriesModule(categoriesService: CategoriesServiceContr
     .patch(
       "/:id",
       async ({ params, body, headers, set }) => {
-        if (!isAdminAuthorized(headers["x-admin-password"])) {
+        const adminPassword = headers["x-admin-password"];
+        if (!adminPassword) {
           set.status = 401;
-          return { error: "Admin password is required for update actions." };
+          return { error: "Admin password is required." };
+        }
+        if (!isAdminAuthorized(adminPassword)) {
+          set.status = 401;
+          return { error: "Admin password is incorrect." };
         }
 
         if (!body.name && body.description === undefined) {
@@ -86,9 +91,14 @@ export function createCategoriesModule(categoriesService: CategoriesServiceContr
     .delete(
       "/:id",
       async ({ params, headers, set }) => {
-        if (!isAdminAuthorized(headers["x-admin-password"])) {
+        const adminPassword = headers["x-admin-password"];
+        if (!adminPassword) {
           set.status = 401;
-          return { error: "Admin password is required for delete actions." };
+          return { error: "Admin password is required." };
+        }
+        if (!isAdminAuthorized(adminPassword)) {
+          set.status = 401;
+          return { error: "Admin password is incorrect." };
         }
 
         try {

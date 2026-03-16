@@ -63,9 +63,14 @@ export function createItemsModule(itemsService: ItemsServiceContract) {
     .patch(
       "/:id",
       async ({ params, body, headers, set }) => {
-        if (!isAdminAuthorized(headers["x-admin-password"])) {
+        const adminPassword = headers["x-admin-password"];
+        if (!adminPassword) {
           set.status = 401;
-          return { error: "Admin password is required for update actions." };
+          return { error: "Admin password is required." };
+        }
+        if (!isAdminAuthorized(adminPassword)) {
+          set.status = 401;
+          return { error: "Admin password is incorrect." };
         }
 
         if (Object.keys(body).length === 0) {
@@ -94,9 +99,14 @@ export function createItemsModule(itemsService: ItemsServiceContract) {
     .delete(
       "/:id",
       async ({ params, headers, set }) => {
-        if (!isAdminAuthorized(headers["x-admin-password"])) {
+        const adminPassword = headers["x-admin-password"];
+        if (!adminPassword) {
           set.status = 401;
-          return { error: "Admin password is required for delete actions." };
+          return { error: "Admin password is required." };
+        }
+        if (!isAdminAuthorized(adminPassword)) {
+          set.status = 401;
+          return { error: "Admin password is incorrect." };
         }
 
         try {
