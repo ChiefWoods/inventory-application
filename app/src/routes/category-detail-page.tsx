@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
-import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import { ArrowLeft } from "lucide-react";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useLoaderData,
+  useNavigate,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -49,7 +60,7 @@ export async function action({ request, params }: { request: Request; params: { 
   try {
     if (intent === "delete") {
       await deleteCategory(id, adminPassword);
-      return redirect("/categories");
+      return redirect("/categories?status=deleted");
     }
 
     await updateCategory(
@@ -72,34 +83,57 @@ export async function action({ request, params }: { request: Request; params: { 
     } satisfies ActionData;
   }
 
-  return redirect(`/categories/${id}`);
+  return redirect(`/categories/${id}?status=updated`);
 }
 
 export function CategoryDetailPage() {
   const { category, itemCount } = useLoaderData() as CategoryDetailData;
   const actionData = useActionData() as ActionData | undefined;
+  const navigate = useNavigate();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveAttempted, setSaveAttempted] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAttempted, setDeleteAttempted] = useState(false);
   const isSubmitting = navigation.state === "submitting";
 
   useEffect(() => {
-    if (!saveAttempted) return;
+    if (searchParams.get("status") !== "updated") return;
+
+    toast.success("Category updated successfully.");
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("status");
+    const search = nextParams.toString();
+    navigate({ search: search ? `?${search}` : "" }, { replace: true });
+  }, [navigate, searchParams]);
+
+  useEffect(() => {
     if (navigation.state !== "idle") return;
 
-    if (actionData?.intent === "update" && actionData.error) {
-      setSaveDialogOpen(true);
-      return;
+    if (saveAttempted) {
+      if (actionData?.intent === "update" && actionData.error) {
+        setSaveDialogOpen(true);
+      } else {
+        setSaveDialogOpen(false);
+        setSaveAttempted(false);
+      }
     }
 
-    setSaveDialogOpen(false);
-    setSaveAttempted(false);
-  }, [actionData, navigation.state, saveAttempted]);
+    if (deleteAttempted) {
+      if (actionData?.intent === "delete" && actionData.error) {
+        setDeleteDialogOpen(true);
+      }
+    }
+  }, [actionData, deleteAttempted, navigation.state, saveAttempted]);
 
   return (
     <section className="space-y-4">
       <Button variant="ghost" asChild>
-        <Link to="/categories">Back to categories</Link>
+        <Link to="/categories">
+          <ArrowLeft />
+          Back to categories
+        </Link>
       </Button>
       <Card>
         <CardHeader>
@@ -122,7 +156,15 @@ export function CategoryDetailPage() {
               />
             </div>
             <div className="flex items-center gap-3">
-              <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+              <AlertDialog
+                open={saveDialogOpen}
+                onOpenChange={(open) => {
+                  if (!open && (saveAttempted || navigation.state === "submitting")) {
+                    return;
+                  }
+                  setSaveDialogOpen(open);
+                }}
+              >
                 <AlertDialogTrigger asChild>
                   <Button type="button" disabled={isSubmitting}>
                     {isSubmitting && saveAttempted ? "Saving..." : "Save changes"}
@@ -149,7 +191,14 @@ export function CategoryDetailPage() {
                       <p className="text-sm text-destructive">{actionData.error}</p>
                     ) : null}
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel
+                        onClick={() => {
+                          setSaveAttempted(false);
+                          setSaveDialogOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </AlertDialogCancel>
                       <Button
                         type="submit"
                         form="category-update-form"
@@ -163,7 +212,15 @@ export function CategoryDetailPage() {
                   </div>
                 </AlertDialogContent>
               </AlertDialog>
-              <AlertDialog>
+              <AlertDialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => {
+                  if (!open && (deleteAttempted || navigation.state === "submitting")) {
+                    return;
+                  }
+                  setDeleteDialogOpen(open);
+                }}
+              >
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="destructive">
                     Delete category
@@ -180,12 +237,25 @@ export function CategoryDetailPage() {
                     <input type="hidden" name="intent" value="delete" />
                     <Label htmlFor="deleteAdminPassword">Admin password</Label>
                     <Input id="deleteAdminPassword" type="password" name="adminPassword" required />
-                    {actionData?.intent === "delete" && actionData.error ? (
+                    {deleteAttempted && actionData?.intent === "delete" && actionData.error ? (
                       <p className="text-sm text-destructive">{actionData.error}</p>
                     ) : null}
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <Button type="submit" variant="destructive">
+                      <AlertDialogCancel
+                        onClick={() => {
+                          setDeleteAttempted(false);
+                          setDeleteDialogOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </AlertDialogCancel>
+                      <Button
+                        type="submit"
+                        variant="destructive"
+                        onClick={() => {
+                          setDeleteAttempted(true);
+                        }}
+                      >
                         Confirm delete
                       </Button>
                     </AlertDialogFooter>

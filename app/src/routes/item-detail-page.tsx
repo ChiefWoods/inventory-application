@@ -1,8 +1,8 @@
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -28,6 +28,7 @@ import { deleteItem, getItem, listCategories, updateItem } from "@/lib/api";
 
 type ActionData = {
   error?: string;
+  intent?: "update" | "delete";
 };
 
 type ItemDetailData = Awaited<ReturnType<typeof loader>>;
@@ -52,11 +53,11 @@ export async function loader({ params }: { params: { id?: string } }) {
 export async function action({ request, params }: { request: Request; params: { id?: string } }) {
   const id = parseId(params);
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "update");
+  const intent = String(formData.get("intent") ?? "update") as "update" | "delete";
   const adminPassword = String(formData.get("adminPassword") ?? "");
 
   if (!adminPassword) {
-    return { error: "Admin password is required." } satisfies ActionData;
+    return { error: "Admin password is required.", intent } satisfies ActionData;
   }
 
   try {
@@ -82,7 +83,13 @@ export async function action({ request, params }: { request: Request; params: { 
     );
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Failed to update item.",
+      error:
+        error instanceof Error
+          ? error.message
+          : intent === "delete"
+            ? "Failed to delete item."
+            : "Failed to update item.",
+      intent,
     } satisfies ActionData;
   }
 
@@ -95,7 +102,30 @@ export function ItemDetailPage() {
   const navigation = useNavigation();
   const [isArchivedChecked, setIsArchivedChecked] = useState(item.isArchived);
   const [selectedCategoryId, setSelectedCategoryId] = useState(String(item.categoryId));
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAttempted, setDeleteAttempted] = useState(false);
   const isSubmitting = navigation.state === "submitting";
+
+  useEffect(() => {
+    if (navigation.state !== "idle") return;
+
+    if (saveAttempted) {
+      if (actionData?.intent === "update" && actionData.error) {
+        setSaveDialogOpen(true);
+      } else {
+        setSaveDialogOpen(false);
+        setSaveAttempted(false);
+      }
+    }
+
+    if (deleteAttempted) {
+      if (actionData?.intent === "delete" && actionData.error) {
+        setDeleteDialogOpen(true);
+      }
+    }
+  }, [actionData, deleteAttempted, navigation.state, saveAttempted]);
 
   return (
     <section className="space-y-4">
@@ -114,7 +144,7 @@ export function ItemDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form method="post" className="space-y-4">
+          <Form id="item-update-form" method="post" className="space-y-4">
             <input type="hidden" name="intent" value="update" />
             <div className="space-y-2">
               <Label htmlFor="categoryId">Category</Label>
@@ -192,18 +222,64 @@ export function ItemDetailPage() {
               />
               Archived
             </label>
-            <div className="space-y-2">
-              <Label htmlFor="adminPassword">Admin password</Label>
-              <Input id="adminPassword" type="password" name="adminPassword" required />
-            </div>
-            {actionData?.error ? (
-              <p className="text-sm text-destructive">{actionData.error}</p>
-            ) : null}
             <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save changes"}
-              </Button>
-              <AlertDialog>
+              <AlertDialog
+                open={saveDialogOpen}
+                onOpenChange={(open) => {
+                  setSaveDialogOpen(open);
+                  if (!open) {
+                    setSaveAttempted(false);
+                  }
+                }}
+              >
+                <AlertDialogTrigger asChild>
+                  <Button type="button" disabled={isSubmitting}>
+                    {isSubmitting && saveAttempted ? "Saving..." : "Save changes"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm save changes?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Enter your admin password to update this item.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-3">
+                    <Label htmlFor="saveAdminPassword">Admin password</Label>
+                    <Input
+                      id="saveAdminPassword"
+                      type="password"
+                      name="adminPassword"
+                      form="item-update-form"
+                      required
+                    />
+                    {saveAttempted && actionData?.intent === "update" && actionData.error ? (
+                      <p className="text-sm text-destructive">{actionData.error}</p>
+                    ) : null}
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <Button
+                        type="submit"
+                        form="item-update-form"
+                        onClick={() => {
+                          setSaveAttempted(true);
+                        }}
+                      >
+                        Confirm save
+                      </Button>
+                    </AlertDialogFooter>
+                  </div>
+                </AlertDialogContent>
+              </AlertDialog>
+              <AlertDialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => {
+                  if (!open && (deleteAttempted || navigation.state === "submitting")) {
+                    return;
+                  }
+                  setDeleteDialogOpen(open);
+                }}
+              >
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="destructive">
                     Delete item
@@ -220,13 +296,27 @@ export function ItemDetailPage() {
                     <input type="hidden" name="intent" value="delete" />
                     <Label htmlFor="deleteAdminPassword">Admin password</Label>
                     <Input id="deleteAdminPassword" type="password" name="adminPassword" required />
+                    {deleteAttempted && actionData?.intent === "delete" && actionData.error ? (
+                      <p className="text-sm text-destructive">{actionData.error}</p>
+                    ) : null}
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction asChild>
-                        <Button type="submit" variant="destructive">
-                          Confirm delete
-                        </Button>
-                      </AlertDialogAction>
+                      <AlertDialogCancel
+                        onClick={() => {
+                          setDeleteAttempted(false);
+                          setDeleteDialogOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </AlertDialogCancel>
+                      <Button
+                        type="submit"
+                        variant="destructive"
+                        onClick={() => {
+                          setDeleteAttempted(true);
+                        }}
+                      >
+                        Confirm delete
+                      </Button>
                     </AlertDialogFooter>
                   </Form>
                 </AlertDialogContent>
