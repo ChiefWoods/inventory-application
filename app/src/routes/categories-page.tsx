@@ -1,4 +1,15 @@
-import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import { useEffect } from "react";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useLoaderData,
+  useNavigate,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,14 +52,34 @@ export async function action({ request }: { request: Request }) {
     } satisfies ActionData;
   }
 
-  return redirect("/categories");
+  return redirect("/categories?status=created");
 }
 
 export function CategoriesPage() {
   const { categories } = useLoaderData() as CategoriesData;
   const actionData = useActionData() as ActionData | undefined;
+  const navigate = useNavigate();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
   const isSubmitting = navigation.state === "submitting";
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (!status) return;
+
+    if (status === "created") {
+      toast.success("Category created successfully.");
+    } else if (status === "deleted") {
+      toast.success("Category deleted successfully.");
+    } else {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("status");
+    const search = nextParams.toString();
+    navigate({ search: search ? `?${search}` : "" }, { replace: true });
+  }, [navigate, searchParams]);
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1.15fr_1.85fr]">

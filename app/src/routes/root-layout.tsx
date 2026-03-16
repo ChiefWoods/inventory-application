@@ -2,6 +2,7 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 
 const themeStorageKey = "inventory-theme";
 
@@ -55,6 +56,7 @@ export function RootLayout() {
         </div>
       </header>
       <Outlet />
+      <Toaster richColors closeButton />
     </div>
   );
 }

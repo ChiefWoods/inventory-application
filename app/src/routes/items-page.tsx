@@ -5,9 +5,12 @@ import {
   redirect,
   useActionData,
   useLoaderData,
+  useNavigate,
   useNavigation,
+  useSearchParams,
   useSubmit,
 } from "react-router";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,13 +89,15 @@ export async function action({ request }: { request: Request }) {
     } satisfies ActionData;
   }
 
-  return redirect("/items");
+  return redirect("/items?status=created");
 }
 
 export function ItemsPage() {
   const { categories, items, filters } = useLoaderData() as ItemsData;
   const actionData = useActionData() as ActionData | undefined;
+  const navigate = useNavigate();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
   const submit = useSubmit();
   const filterDebounceRef = useRef<number | null>(null);
   const filterFormRef = useRef<HTMLFormElement>(null);
@@ -123,6 +128,24 @@ export function ItemsPage() {
 
     submit(form, { replace: true });
   };
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (!status) return;
+
+    if (status === "deleted") {
+      toast.success("Item deleted successfully.");
+    } else if (status === "created") {
+      toast.success("Item created successfully.");
+    } else {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("status");
+    const search = nextParams.toString();
+    navigate({ search: search ? `?${search}` : "" }, { replace: true });
+  }, [navigate, searchParams]);
 
   useEffect(() => {
     if (navigation.state !== "idle") return;

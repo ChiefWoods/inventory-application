@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useLoaderData,
+  useNavigate,
+  useNavigation,
+  useSearchParams,
+} from "react-router";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -63,7 +73,7 @@ export async function action({ request, params }: { request: Request; params: { 
   try {
     if (intent === "delete") {
       await deleteItem(id, adminPassword);
-      return redirect("/items");
+      return redirect("/items?status=deleted");
     }
 
     await updateItem(
@@ -93,13 +103,15 @@ export async function action({ request, params }: { request: Request; params: { 
     } satisfies ActionData;
   }
 
-  return redirect(`/items/${id}`);
+  return redirect(`/items/${id}?status=updated`);
 }
 
 export function ItemDetailPage() {
   const { item, categories } = useLoaderData() as ItemDetailData;
   const actionData = useActionData() as ActionData | undefined;
+  const navigate = useNavigate();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
   const [isArchivedChecked, setIsArchivedChecked] = useState(item.isArchived);
   const [selectedCategoryId, setSelectedCategoryId] = useState(String(item.categoryId));
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -107,6 +119,16 @@ export function ItemDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAttempted, setDeleteAttempted] = useState(false);
   const isSubmitting = navigation.state === "submitting";
+
+  useEffect(() => {
+    if (searchParams.get("status") !== "updated") return;
+
+    toast.success("Item updated successfully.");
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("status");
+    const search = nextParams.toString();
+    navigate({ search: search ? `?${search}` : "" }, { replace: true });
+  }, [navigate, searchParams]);
 
   useEffect(() => {
     if (navigation.state !== "idle") return;
