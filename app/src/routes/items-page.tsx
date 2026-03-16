@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Form,
   Link,
@@ -96,6 +96,8 @@ export function ItemsPage() {
   const submit = useSubmit();
   const filterDebounceRef = useRef<number | null>(null);
   const filterFormRef = useRef<HTMLFormElement>(null);
+  const createFormRef = useRef<HTMLFormElement>(null);
+  const createAttemptedRef = useRef(false);
   const lowStockHiddenRef = useRef<HTMLInputElement>(null);
   const [filterCategoryId, setFilterCategoryId] = useState(filters.categoryId || "__all__");
   const [createCategoryId, setCreateCategoryId] = useState(
@@ -121,6 +123,17 @@ export function ItemsPage() {
 
     submit(form, { replace: true });
   };
+
+  useEffect(() => {
+    if (navigation.state !== "idle") return;
+    if (!createAttemptedRef.current) return;
+    if (actionData?.error) return;
+
+    createFormRef.current?.reset();
+    setCreateArchivedChecked(false);
+    setCreateCategoryId(categories[0] ? String(categories[0].id) : "");
+    createAttemptedRef.current = false;
+  }, [actionData, categories, navigation.state]);
 
   return (
     <section className="space-y-6">
@@ -251,7 +264,14 @@ export function ItemsPage() {
             <CardDescription>Create a new inventory record.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Form method="post" className="space-y-3">
+            <Form
+              ref={createFormRef}
+              method="post"
+              className="space-y-3"
+              onSubmit={() => {
+                createAttemptedRef.current = true;
+              }}
+            >
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Category</Label>
                 <input type="hidden" id="categoryId" name="categoryId" value={createCategoryId} />
