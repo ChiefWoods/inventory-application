@@ -110,9 +110,8 @@ export function createCategoriesModule(categoriesService: CategoriesServiceContr
 
           return { data: { id: params.id, deleted: true } };
         } catch (error) {
-          // FK restriction when category still has items lands here.
           set.status = 409;
-          return normalizeError(error);
+          return { error: "Cannot delete category while it still has items." };
         }
       },
       { params: categoryIdParams },

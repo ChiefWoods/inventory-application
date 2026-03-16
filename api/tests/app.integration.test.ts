@@ -106,9 +106,13 @@ describe("App integration", () => {
         headers: { "x-admin-password": "integration-secret" },
       }),
     );
+    const categoryDeletePayload = (await json(categoryDeleteResponse)) as {
+      error: string;
+    };
 
     // Category delete fails due to FK restriction while item exists.
     expect(categoryDeleteResponse.status).toBe(409);
+    expect(categoryDeletePayload.error).toBe("Cannot delete category while it still has items.");
 
     await testDb.close();
   });
