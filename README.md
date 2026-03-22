@@ -63,7 +63,6 @@ View the [open issues](https://github.com/ChiefWoods/inventory-application/issue
 ### Hosting
 
 - [Render](https://render.com/)
-- [Neon](http://neon.com/)
 
 ## Contact
 
