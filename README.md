@@ -4,9 +4,6 @@
 
 Management dashboard for [The Odin Project](https://www.theodinproject.com/).
 
-[Live App](TODO)
-[Live API](TODO)
-
 [Source Repository](https://github.com/ChiefWoods/inventory-application)
 
 ## Features
