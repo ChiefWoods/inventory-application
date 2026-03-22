@@ -2,7 +2,7 @@ name: inventory-application
 
 services:
   db:
-    image: postgres:16
+    image: postgres:18.3-alpine
     container_name: db
     restart: unless-stopped
     environment:
@@ -20,7 +20,7 @@ services:
       retries: 10
   test-db:
     profiles: ["test"]
-    image: postgres:16
+    image: postgres:18.3-alpine
     container_name: test-db
     environment:
       POSTGRES_USER: ${TEST_POSTGRES_USER:-postgres}
