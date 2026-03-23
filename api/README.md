@@ -40,13 +40,19 @@ bun run dev
 
 ## Testing
 
-1. Start local Postgres (test)
+1. Create env file
+
+```bash
+cp .env.example .env.test
+```
+
+2. Start local Postgres (test)
 
 ```bash
 bun run docker:test-db:up
 ```
 
-2. Test project
+3. Test project
 
 ```bash
 bun run test

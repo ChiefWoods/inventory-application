@@ -3,8 +3,6 @@ import { CategoriesService } from "../src/modules/categories/service";
 import { ItemsService } from "../src/modules/items/service";
 import { createTestDb } from "./db";
 
-const databaseTest = process.env.TEST_DATABASE_URL ? test : test.skip;
-
 describe("CategoriesService", () => {
   let categoriesService: CategoriesService;
   let itemsService: ItemsService;
@@ -17,7 +15,7 @@ describe("CategoriesService", () => {
     close = testDb.close;
   });
 
-  databaseTest("create + getById returns normalized category", async () => {
+  test("create + getById returns normalized category", async () => {
     const created = await categoriesService.create({
       name: "Single Origin Beans",
       description: "Light roasts",
@@ -31,7 +29,7 @@ describe("CategoriesService", () => {
     await close();
   });
 
-  databaseTest("list includes item counts", async () => {
+  test("list includes item counts", async () => {
     const category = await categoriesService.create({
       name: "Brew Gear",
     });
@@ -52,7 +50,7 @@ describe("CategoriesService", () => {
     await close();
   });
 
-  databaseTest("update changes name/slug and remove deletes record", async () => {
+  test("update changes name/slug and remove deletes record", async () => {
     const category = await categoriesService.create({
       name: "Filters",
     });

@@ -3,8 +3,6 @@ import { CategoriesService } from "../src/modules/categories/service";
 import { ItemsService } from "../src/modules/items/service";
 import { createTestDb } from "./db";
 
-const databaseTest = process.env.TEST_DATABASE_URL ? test : test.skip;
-
 describe("ItemsService", () => {
   let categoriesService: CategoriesService;
   let itemsService: ItemsService;
@@ -23,7 +21,7 @@ describe("ItemsService", () => {
     categoryId = category.id;
   });
 
-  databaseTest("create + getById stores and loads item", async () => {
+  test("create + getById stores and loads item", async () => {
     const created = await itemsService.create({
       categoryId,
       name: "Ethiopia Yirgacheffe",
@@ -42,7 +40,7 @@ describe("ItemsService", () => {
     await close();
   });
 
-  databaseTest("list supports q and lowStock filters", async () => {
+  test("list supports q and lowStock filters", async () => {
     await itemsService.create({
       categoryId,
       name: "Kenya AA",
@@ -71,7 +69,7 @@ describe("ItemsService", () => {
     await close();
   });
 
-  databaseTest("update and remove behave correctly", async () => {
+  test("update and remove behave correctly", async () => {
     const created = await itemsService.create({
       categoryId,
       name: "Brazil Santos",

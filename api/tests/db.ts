@@ -27,9 +27,9 @@ async function executeSqlFile(
 }
 
 export async function createTestDb(): Promise<TestDbContext> {
-  const databaseUrl = process.env.TEST_DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error("Missing TEST_DATABASE_URL for database-backed tests.");
+    throw new Error("Missing DATABASE_URL for database-backed tests.");
   }
 
   const sqlClient = postgres(databaseUrl, { max: 1 });

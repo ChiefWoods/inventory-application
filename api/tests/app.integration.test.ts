@@ -4,8 +4,6 @@ import { CategoriesService } from "../src/modules/categories/service";
 import { ItemsService } from "../src/modules/items/service";
 import { createTestDb } from "./db";
 
-const integrationTest = process.env.TEST_DATABASE_URL ? test : test.skip;
-
 async function json(response: Response): Promise<unknown> {
   return await response.json();
 }
@@ -15,7 +13,7 @@ describe("App integration", () => {
     process.env.ADMIN_SECRET = "integration-secret";
   });
 
-  integrationTest("full category and item flow", async () => {
+  test("full category and item flow", async () => {
     const testDb = await createTestDb();
     const categoriesService = new CategoriesService(testDb.db);
     const itemsService = new ItemsService(testDb.db);
