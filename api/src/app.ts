@@ -44,3 +44,5 @@ export function createApp(options: AppOptions) {
     .use(createCategoriesModule(options.categoriesService))
     .use(createItemsModule(options.itemsService));
 }
+
+export type InventoryApi = ReturnType<typeof createApp>;

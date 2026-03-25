@@ -24,7 +24,11 @@ export type Category = {
 };
 
 export class CategoriesService {
-  constructor(private readonly db: ReturnType<typeof drizzle>) {}
+  private readonly db: ReturnType<typeof drizzle>;
+
+  constructor(db: ReturnType<typeof drizzle>) {
+    this.db = db;
+  }
 
   async list(): Promise<Category[]> {
     const rows = await this.db

@@ -39,7 +39,11 @@ export type Item = {
 };
 
 export class ItemsService {
-  constructor(private readonly db: ReturnType<typeof drizzle>) {}
+  private readonly db: ReturnType<typeof drizzle>;
+
+  constructor(db: ReturnType<typeof drizzle>) {
+    this.db = db;
+  }
 
   async list(filters: ListItemsFilter): Promise<Item[]> {
     const conditions = [];

@@ -1,3 +1,5 @@
+import { treaty } from "@elysiajs/eden";
+import type { InventoryApi } from "@inventory-application/api/app";
 import { API_BASE_URL } from "./env";
 import type {
   Category,
@@ -9,70 +11,50 @@ import type {
   UpdateItemInput,
 } from "./types";
 
-type ApiError = {
-  error: string;
-};
+const client = treaty<InventoryApi>(API_BASE_URL);
 
-type ApiEnvelope<T> = {
-  data: T;
-};
-
-type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
-  body?: unknown;
-  adminPassword?: string;
-};
-
-function buildUrl(
-  path: string,
-  query?: Record<string, string | number | boolean | undefined>,
-): string {
-  const url = new URL(path, API_BASE_URL);
-  if (!query) return url.toString();
-
-  for (const [key, value] of Object.entries(query)) {
-    if (value === undefined || value === "") continue;
-    url.searchParams.set(key, String(value));
+function treatyErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "value" in error) {
+    const value = (error as { value: unknown }).value;
+    if (value && typeof value === "object" && "error" in value) {
+      const msg = (value as { error: unknown }).error;
+      if (typeof msg === "string") return msg;
+    }
   }
-
-  return url.toString();
+  return "Request failed.";
 }
 
-async function requestJson<T>(
-  path: string,
-  query?: Record<string, string | number | boolean | undefined>,
-  options: RequestOptions = {},
-): Promise<T> {
-  const response = await fetch(buildUrl(path, query), {
-    method: options.method ?? "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.adminPassword ? { "x-admin-password": options.adminPassword } : {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-
-  const payload = (await response.json()) as ApiEnvelope<T> | ApiError;
-  if (!response.ok || "error" in payload) {
-    throw new Error("error" in payload ? payload.error : "Request failed.");
+/** JSON body is `{ data: T }` or `{ error: string }`; Treaty may union these on 200. */
+function unwrapInventoryData<T>(result: { data: unknown; error: unknown }): T {
+  if (result.error !== null && result.error !== undefined) {
+    throw new Error(treatyErrorMessage(result.error));
   }
-
-  return payload.data;
+  const body = result.data;
+  if (!body || typeof body !== "object") {
+    throw new Error("Request failed.");
+  }
+  if ("error" in body && typeof (body as { error?: unknown }).error === "string") {
+    throw new Error((body as { error: string }).error);
+  }
+  if (!("data" in body)) {
+    throw new Error("Request failed.");
+  }
+  return (body as { data: T }).data;
 }
 
 export function listCategories(): Promise<Category[]> {
-  return requestJson<Category[]>("/categories");
+  return client.categories.get().then(unwrapInventoryData<Category[]>);
 }
 
 export function getCategory(id: number): Promise<Category> {
-  return requestJson<Category>(`/categories/${id}`);
+  return client
+    .categories({ id })
+    .get()
+    .then(unwrapInventoryData<Category>);
 }
 
 export function createCategory(input: CreateCategoryInput): Promise<Category> {
-  return requestJson<Category>("/categories", undefined, {
-    method: "POST",
-    body: input,
-  });
+  return client.categories.post(input).then(unwrapInventoryData<Category>);
 }
 
 export function updateCategory(
@@ -80,40 +62,41 @@ export function updateCategory(
   input: UpdateCategoryInput,
   adminPassword: string,
 ): Promise<Category> {
-  return requestJson<Category>(`/categories/${id}`, undefined, {
-    method: "PATCH",
-    body: input,
-    adminPassword,
-  });
+  return client
+    .categories({ id })
+    .patch(input, { headers: { "x-admin-password": adminPassword } })
+    .then(unwrapInventoryData<Category>);
 }
 
 export function deleteCategory(
   id: number,
   adminPassword: string,
 ): Promise<{ id: number; deleted: boolean }> {
-  return requestJson<{ id: number; deleted: boolean }>(`/categories/${id}`, undefined, {
-    method: "DELETE",
-    adminPassword,
-  });
+  return client
+    .categories({ id })
+    .delete({ headers: { "x-admin-password": adminPassword } })
+    .then(unwrapInventoryData<{ id: number; deleted: boolean }>);
 }
 
 export function listItems(filters: ItemFilters = {}): Promise<Item[]> {
-  return requestJson<Item[]>("/items", {
-    categoryId: filters.categoryId,
-    q: filters.q,
-    lowStock: filters.lowStock,
-  });
+  const query: ItemFilters = {};
+  if (filters.categoryId !== undefined) query.categoryId = filters.categoryId;
+  if (filters.q !== undefined && filters.q !== "") query.q = filters.q;
+  if (filters.lowStock !== undefined) query.lowStock = filters.lowStock;
+
+  const hasQuery = Object.keys(query).length > 0;
+  return client.items.get(hasQuery ? { query } : {}).then(unwrapInventoryData<Item[]>);
 }
 
 export function getItem(id: number): Promise<Item> {
-  return requestJson<Item>(`/items/${id}`);
+  return client
+    .items({ id })
+    .get()
+    .then(unwrapInventoryData<Item>);
 }
 
 export function createItem(input: CreateItemInput): Promise<Item> {
-  return requestJson<Item>("/items", undefined, {
-    method: "POST",
-    body: input,
-  });
+  return client.items.post(input).then(unwrapInventoryData<Item>);
 }
 
 export function updateItem(
@@ -121,19 +104,18 @@ export function updateItem(
   input: UpdateItemInput,
   adminPassword: string,
 ): Promise<Item> {
-  return requestJson<Item>(`/items/${id}`, undefined, {
-    method: "PATCH",
-    body: input,
-    adminPassword,
-  });
+  return client
+    .items({ id })
+    .patch(input, { headers: { "x-admin-password": adminPassword } })
+    .then(unwrapInventoryData<Item>);
 }
 
 export function deleteItem(
   id: number,
   adminPassword: string,
 ): Promise<{ id: number; deleted: boolean }> {
-  return requestJson<{ id: number; deleted: boolean }>(`/items/${id}`, undefined, {
-    method: "DELETE",
-    adminPassword,
-  });
+  return client
+    .items({ id })
+    .delete({ headers: { "x-admin-password": adminPassword } })
+    .then(unwrapInventoryData<{ id: number; deleted: boolean }>);
 }
